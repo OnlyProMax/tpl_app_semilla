@@ -1,101 +1,4 @@
-//S: server and files cfg
-ServerUrl= location.href.match(/(https?:\/\/[^\/]+)/)[0]; //A: tomar protocolo, servidor y puerto de donde esta esta pagina
-ApiUrl= ServerUrl+'/api';
-//TODO: actualizar todas las de abajo
-
-//colores rgb de la empresa BLK
-COLORS= {
-  azulOscuro: 'rgb(56,87,162)',
-  azulClaro: 'rgb(105,178,226)',
-  gris: 'rgb(194,195,201)',
-}
-
-LAYOUT= {
-  SMART_BG_COLOR : COLORS.gris //A: el fondo la pagina para el sitio 
-}
-
-VIDEO_ICON_URL = '/ui/imagenes/video_play.png'
-
-//S: globales
-var Usuario= ''; //el nombre que se ingreso en el formulario de ingreso
-var Password= '';
-
-/************************************************************************** */
-/****S: Util */
-
-CopyToClipboardEl= null; //U: el elemento donde ponemos texto para copiar
-function copyToClipboard(texto) { //A: pone texto en el clipboard
-	if (CopyToClipboardEl==null) {
-		CopyToClipboardEl= document.createElement("textarea");   	
-		CopyToClipboardEl.style.height="0px"; 
-		CopyToClipboardEl.style.position= "fixed"; 
-		CopyToClipboardEl.style.bottom= "0"; 
-		CopyToClipboardEl.style.left= "0"; 
-		document.body.append(CopyToClipboardEl);
-	}
-	CopyToClipboardEl.value= texto;	
-	CopyToClipboardEl.textContent= texto;	
-	CopyToClipboardEl.select();
-	console.log("COPY "+document.execCommand('copy')); 
-	document.getSelection().removeAllRanges();
-}
-
-/************************************************************************** */
-
-function credentialsSave() {
-	localStorage.setItem('usuario', Usuario);
-	localStorage.setItem('password', Password);
-}
-
-function credentialsLoad() {
-	if (!Usuario){
-		Usuario = localStorage.getItem('usuario');
-		Password = localStorage.getItem('password');
-	}
-	return Usuario;
-}
-
-function genToken() { //U: genera un token unico para autenticarse con el servidor
-  var salt= Math.floor((Math.random() * 10000000)).toString(16).substr(0,4);
-  var token= salt+CryptoJS.SHA256(salt + Usuario + Password).toString(); //TODO: defenir stringHash() como en el server //TODO: EXPIRAR el token!!!
-  return token;
-}
-
-function JSONtoDATE(JSONdate) {  //U: recibe una fecha en formato json y devuelve un string con la fecha dia/mes/anio
-	let fecha = new Date(JSONdate);
-	if (isNaN(fecha)) return 'error en fecha'
-	return  [fecha.getDate(), fecha.getMonth()+1, fecha.getFullYear()].map(n => (n+'').padStart(2,"0")).join("/");
-	//A: ojo, Enero es el mes CERO para getMonth
-}
-
-function JSONtoHour(JSONdate) {
-	let date = new Date(JSONdate);
-	return [date.getHours(), date.getMinutes()].map(n => (n+'').padStart(2,"0")).join(":");
-}             
-
-
-async function FetchUrl(url, usuario, password, quiereJsonParseado, data, method){ //U: hacer una peticion GET y recibir un JSON
-  let response= await fetch(url,{
-		method: method || 'GET', //U: puede ser POST
-    headers: new Headers({
-      'Authorization': 'Basic '+btoa(`${usuario}:${password}`), 
-      'Content-Type': 'application/json',
-    }),
-		body: data!=null ? JSON.stringify(data): null,
-  })
-  if(quiereJsonParseado=="text") { return await response.text(); }
-	else if (quiereJsonParseado) { return await response.json(); }
-
-  return response;
-}
-
-async function GetUrl(url,quiereJsonParseado, data) {
-	return FetchUrl(url, Usuario, Password, quiereJsonParseado, data);
-}
-
-async function PostUrl(url, quiereJsonParseado, data) {
-	return FetchUrl(url, Usuario, Password, quiereJsonParseado, data, 'POST');
-}
+//INFO: punto de entrada de la parte que se ejecuta en la web
 
 //------------------------------------------------------------
 uiHome= CmpDef(function uiHome(my){ //U: pantalla principal cuando ya te logueaste
@@ -109,12 +12,12 @@ uiLogin= CmpDef(function uiLogin(my){ //U: formulario de ingreso
   tecleando= (e, { name, value }) => my.setState({[name]: value});
   enviarFormulario= () => {
     
-    Usuario= my.state.nombre.trim();
-    Password= my.state.password.trim();
+    Auth_usr= my.state.nombre.trim();
+    Auth_pass= my.state.password.trim();
 
-    if(Usuario !='' && Usuario != null & Usuario != undefined){
+    if(Auth_usr !='' && Auth_usr != null & Auth_usr != undefined){
       if(my.state.password !='' && my.state.password != null & my.state.password != undefined)
-			credentialsSave();
+			auth_save();
       preactRouter.route("/home")
     }
   }
@@ -127,7 +30,7 @@ uiLogin= CmpDef(function uiLogin(my){ //U: formulario de ingreso
           h(Form,{size:'large',onSubmit: enviarFormulario },
             h(Segment,{stacked:true},
               h(Form.Input,{name: 'nombre',onChange: tecleando , fluid:true, icon:'user', iconPosition:'left', placeholder:'E-mail address',value: my.state.nombre}),
-              h(Form.Input,{name: 'password', onChange: tecleando,fluid:true, icon:'lock',iconPosition:'left',placeholder:'Password',type:'password',value: my.state.password}),
+              h(Form.Input,{name: 'password', onChange: tecleando,fluid:true, icon:'lock',iconPosition:'left',placeholder:'Auth_pass',type:'password',value: my.state.password}),
               h(Button,{color:'blue', fluid:true,size:'large'},"Login")  //onClick: () =>preactRouter.route("/menu")
             )
           )  
@@ -146,18 +49,18 @@ uiMenuTopbar= CmpDef(function uiMenuTopbar(my) {//U: menu principal de la parte 
         
         h(Menu.Menu,{position:'right'},
           h(Menu.Item,{},
-            h(Icon,{name:'user',size:'big',style:{'color': COLORS.azulOscuro}}),
-            h('p',{style:{'color': COLORS.azulOscuro}}, `Welcome ${Usuario ? Usuario : ''}`,)
+            h(Icon,{name:'user',size:'big',style:{'color': COLOR.azulOscuro}}),
+            h('p',{style:{'color': COLOR.azulOscuro}}, `Welcome ${Auth_usr ? Auth_usr : ''}`,)
             
           ),
           h(Menu.Item,{},            
             h(Button, {onClick: resetDemo, style:{'background-color': '#600000','color':'rgb(255,255,255)',}},"reset" ),
           ),
           h(Menu.Item,{},
-            h(Button, {onClick: () =>preactRouter.route("/"), style:{'background-color': COLORS.azulClaro,'color':'rgb(255,255,255)'}},"Log Out" ),
+            h(Button, {onClick: () =>preactRouter.route("/"), style:{'background-color': COLOR.azulClaro,'color':'rgb(255,255,255)'}},"Log Out" ),
           ),
           h(Menu.Item,{},
-            h(Button, {onClick: () =>preactRouter.route("/cfg/create"), style:{'background-color': COLORS.azulClaro,'color':'rgb(255,255,255)'}},"Devices" ),
+            h(Button, {onClick: () =>preactRouter.route("/cfg/create"), style:{'background-color': COLOR.azulClaro,'color':'rgb(255,255,255)'}},"Devices" ),
           ),
            h(Menu.Item,{},
             h(Button, {icon: true,labelPosition:'left',onClick: props.onRefresh, color: 'green'},
@@ -267,7 +170,7 @@ Rutas= { //U; RUTA DE PREACT ROUTE
 App= CmpDef(function App(my) {
   my.componentWillMount = function () {
     var body = document.getElementsByTagName('body')[0];
-    body.style.backgroundColor =  LAYOUT.SMART_BG_COLOR;
+    body.style.backgroundColor =  LAYOUT.BG_COLOR;
   }
   //A: cambio el color del fondo
  
