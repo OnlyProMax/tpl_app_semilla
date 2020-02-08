@@ -15,6 +15,7 @@ render_str= preactRenderToString; //U: genera el html para un componente
 
 function CmpDef(f, proto) { //U: definir un componente de UI que se puede usar como los otros de pReact+Semantic ej. Button, le pasa una variable "my" como parametro a "f" ej. para hacer "my.render= ..."
 	proto= proto || Component;
+	f= f || function () {};
 	var myComponentDef= function (...args) {
 		var my= this; //A: I want my closueres back!
 		proto.apply(my,args);  //A: initialize with parent

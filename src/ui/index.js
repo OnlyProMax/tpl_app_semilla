@@ -7,6 +7,7 @@ function scr_home(my){ //U: pantalla principal cuando ya te logueaste
 
 function scr_login(my){ //U: formulario de ingreso 
   var tecleando= (e, { name, value }) => my.setState({[name]: value});
+	toState= (k) => { return { name: k, value: my.state[k], onChange: tecleando} };
 
   var enviarFormulario= () => {
     Auth_usr= my.state.nombre.trim();
@@ -24,10 +25,10 @@ function scr_login(my){ //U: formulario de ingreso
       h(Grid,{textAlign:'center', style:{ height: '100vh' }, verticalAlign:'middle'},
         h(Grid.Column, {style: {maxWidth: 450}},
           h(Image,{style: {width: "10em", height: "10em", margin: 'auto'}, src:'./imagenes/logo.png'},), 
-          h(Form,{size:'large',onSubmit: enviarFormulario },
+          h(Form, {size:'large',onSubmit: enviarFormulario },
             h(Segment,{stacked:true},
               h(Form.Input,{name: 'nombre',onChange: tecleando , fluid:true, icon:'user', iconPosition:'left', placeholder:'E-mail address',value: my.state.nombre}),
-              h(Form.Input,{name: 'password', onChange: tecleando,fluid:true, icon:'lock',iconPosition:'left',placeholder:'Auth_pass',type:'password',value: my.state.password}),
+              h(Form.Input,{name: 'password', onChange: tecleando, fluid:true, icon:'lock',iconPosition:'left',placeholder:'Password',type:'password',value: my.state.password}),
               h(Button,{color:'blue', fluid:true,size:'large'},"Login")  //onClick: () =>appGoTo("/menu")
             )
           )  
@@ -46,18 +47,14 @@ uiMenuTopbar= CmpDef(function uiMenuTopbar(my) {//U: menu principal de la parte 
         
         h(Menu.Menu,{position:'right'},
           h(Menu.Item,{},
-            h(Icon,{name:'user',size:'big',style:{'color': COLOR.azulOscuro}}),
-            h('p',{style:{'color': COLOR.azulOscuro}}, `Welcome ${Auth_usr ? Auth_usr : ''}`,)
-            
+            h(Icon,{name:'user',size:'big'}),
+            h('p',{}, `Welcome ${Auth_usr ? Auth_usr : ''}`,)
           ),
           h(Menu.Item,{},            
-            h(Button, {onClick: resetDemo, style:{'background-color': '#600000','color':'rgb(255,255,255)',}},"reset" ),
+            h(Button, {onClick: resetDemo},"reset"),
           ),
           h(Menu.Item,{},
-            h(Button, {onClick: () =>appGoTo("/cfg/create"), style:{'background-color': COLOR.azulClaro,'color':'rgb(255,255,255)'}},"Devices" ),
-          ),
-           h(Menu.Item,{},
-            h(Button, {icon: true,labelPosition:'left',onClick: props.onRefresh, color: 'green'},
+            h(Button, {onClick: props.onRefresh, icon: true, labelPosition:'left',},
             h(Icon,{name:'refresh'}), 
 						"Refresh" )
           )

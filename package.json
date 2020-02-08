@@ -50,6 +50,9 @@
   },
   "keywords": [],
   "dependencies": {
+    "sqlite3": "^4.0.8",
+    "sequelize": "^5.8.7",
+    "@hapi/joi": "^15.0.0",
     "cross-fetch": "^3.0.1",
     "crypto-js": "^3.1.9-1",
     "express": "^4.16.4",

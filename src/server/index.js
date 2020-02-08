@@ -371,7 +371,130 @@ app.get('/api/isPodemosAprender', verificarAuth,  (req, res) => {
 	//TODO: agregar salt al hash
 })
 
-//-----------------------------------------------------------------------------------
+
+//=====================================================================
+//S: base de datos sql
+var Sequelize = require('sequelize');
+var Joi = require('@hapi/joi'); //A: para validar input, definir esquema //VER: https://github.com/hapijs/joi
+
+//S: definir tipos de datos una sola vez para validar, db, forms, etc.
+var UserDefJoi = Joi.object().keys({
+    fName: Joi.string().alphanum().min(3).max(30).regex(/^[a-zA-Z]{3,30}$/).required(),
+    lName: Joi.string().alphanum().min(3).max(30).regex(/^[a-zA-Z]{3,30}$/).required(),
+    email: Joi.string().email({ minDomainSegments: 2 })
+});
+
+//------------------------------------------------------------
+// default user list
+var users = [
+      ["Podemos","Aprender"],
+      ["Los Maestros","Roban"],
+      ["Mauricio","Cap"]
+    ];
+var User;
+var Proyecto;
+
+// setup a new database
+// using database credentials set in .env
+ensureDir(".data");
+var sequelize = new Sequelize('database', process.env.DB_USER, process.env.DB_PASS, {
+  host: '0.0.0.0',
+  dialect: 'sqlite',
+  pool: {
+    max: 5,
+    min: 0,
+    idle: 10000
+  },
+    // Security note: the database is saved to the file `database.sqlite` on the local filesystem. It's deliberately placed in the `.data` directory
+    // which doesn't get copied if someone remixes the project.
+  storage: '.data/database.sqlite'
+});
+
+console.log("DB auth antes")
+// authenticate with the database
+sequelize.authenticate()
+  .then(function(err) {
+    console.log("DB auth then")
+    console.log('Connection has been established successfully.');
+    // define a new table 'users'
+    User = sequelize.define('users', {
+      firstName: {
+        type: Sequelize.STRING
+      },
+      lastName: {
+        type: Sequelize.STRING
+      }
+    });
+
+    // define a new table 'users'
+    Proyecto = sequelize.define('proyectos', {
+      name: {
+        type: Sequelize.STRING
+      },
+    });
+    
+    setup();
+  })
+  .catch(function (err) {
+    console.log('Unable to connect to the database: ', err);
+  });
+
+// populate table with default users
+var QuiereReiniciarLaDb= true; //OjO! Borra los datos
+
+function setup(){
+  if (!QuiereReiniciarLaDb) { return }
+
+  //A: si llego aqui, borramos las tablas y las cargamos de nuevo! 
+  User.sync({force: true}) // using 'force' it drops the table users if it already exists, and creates a new one
+    .then(function(){
+      // Add the default users to the database
+      for(var i=0; i<users.length; i++){ // loop through all users
+        User.create({ firstName: users[i][0], lastName: users[i][1]}); // create a new entry in the users table
+      }
+    }); 
+  
+  Proyecto.sync({force: true});
+
+}
+
+app.get("/api/db/users", function (request, response) {
+  var dbUsers=[];
+  User.findAll().then(function(users) { // find all entries in the users tables
+    users.forEach(function(user) {
+      dbUsers.push([user.firstName,user.lastName]); // adds their info to the dbUsers value
+    });
+    response.send(dbUsers); // sends dbUsers back to the page
+  });
+});
+
+// creates a new entry in the users table with the submitted values
+//U: curl 'https://db-sql-tutorial.glitch.me/users?falla=el+que+lee' --data '' => mensaje de error
+app.post("/api/db/users", function (request, response) {
+  var uData= {}; "fName lName email".split(" ").forEach( k => { uData[k]= request.query[k] });
+  var validationResult= Joi.validate(uData, UserDefJoi);
+  if (validationResult.error===null) {
+    User.create({ firstName: uData.fName, lastName: uData.lName});
+  }
+  else {
+    response.send(validationResult.error.details);
+  }
+  response.sendStatus(200);
+});
+
+// drops the table users if it already exists, populates new users table it with just the default users.
+app.get("/api/db/reset", function (request, response) {
+  setup();
+  response.redirect("/");
+});
+
+// removes all entries from the users table
+app.get("api/db/users/clear", function (request, response) {
+  User.destroy({where: {}});
+  response.redirect("/");
+});
+
+//============================================================
 //S: inicializar
 
 //U: listen for requests
