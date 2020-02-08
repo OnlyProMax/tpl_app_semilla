@@ -1,5 +1,5 @@
 // INFO: componente que dibuja una galeria con un array de fotos que le pasan
- uiGalleriaImagenes= MkUiComponent(function (my) {
+uiGalleriaImagenes= CmpDef(function (my) {
 	var imagenes = [
         'https://images.freeimages.com/images/large-previews/3a6/rain-on-sea-ii-1368899.jpg',
         'https://cdn.pixabay.com/photo/2020/01/11/13/22/freedom-4757533_1280.jpg',

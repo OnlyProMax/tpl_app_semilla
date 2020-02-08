@@ -61,14 +61,6 @@ function genToken() { //U: genera un token unico para autenticarse con el servid
   return token;
 }
 
-/************************************************************************** */
-var Estilos= "cerulean chubby cosmo cyborg darkly flatly journal lumen paper readable sandstone simplex slate solar spacelab superhero united yeti".split(' ');
-
-function setTheme(t) {
-  var st= document.getElementById("tema");
-  st.href='/node_modules/semantic-ui-forest-themes/semantic.'+t+'.min.css';
-}
-
 function JSONtoDATE(JSONdate) {  //U: recibe una fecha en formato json y devuelve un string con la fecha dia/mes/anio
 	let fecha = new Date(JSONdate);
 	if (isNaN(fecha)) return 'error en fecha'
@@ -106,13 +98,13 @@ async function PostUrl(url, quiereJsonParseado, data) {
 }
 
 //------------------------------------------------------------
-uiHome= MkUiComponent(function uiHome(my){ //U: pantalla principal cuando ya te logueaste
+uiHome= CmpDef(function uiHome(my){ //U: pantalla principal cuando ya te logueaste
 	my.render= function () {
 		return 'Hola'
 	}	
 });
 
-uiLogin= MkUiComponent(function uiLogin(my){ //U: formulario de ingreso 
+uiLogin= CmpDef(function uiLogin(my){ //U: formulario de ingreso 
 
   tecleando= (e, { name, value }) => my.setState({[name]: value});
   enviarFormulario= () => {
@@ -146,7 +138,7 @@ uiLogin= MkUiComponent(function uiLogin(my){ //U: formulario de ingreso
 });
 
 //------------------------------------------------------------
-uiMenuTopbar= MkUiComponent(function uiMenuTopbar(my) {//U: menu principal de la parte superior 
+uiMenuTopbar= CmpDef(function uiMenuTopbar(my) {//U: menu principal de la parte superior 
   my.render= function (props, state) {
     return (
       h(Menu,{item:true,stackable:true,style:{backgroundColor: 'rgb(255, 255, 255)',backgroundColor: 'rgb(48,53,66)'}},
@@ -215,7 +207,7 @@ function TokenValidate(token, cb) { //U: validar token con servidor
 	//A: consultar servidor, puede dar ERROR si el token no es valido
 }
 
-uiTokenQRData= MkUiComponent(function uiTokenQRData(my){ //U: mostrar datos de un token
+uiTokenQRData= CmpDef(function uiTokenQRData(my){ //U: mostrar datos de un token
   my.render = function uiTokenQRData_render(props,state) {
 		console.log("uiTokenQRData render", props, state)
 		if (props.token != state.token) { //A: todavia no validamos
@@ -243,7 +235,7 @@ uiTokenQRData= MkUiComponent(function uiTokenQRData(my){ //U: mostrar datos de u
 });
 
 //----------------------------------------------------------
-uiDataMensaje= MkUiComponent(function uiDataMensaje(my){ //U: como tomar parametros de la ruta
+uiDataMensaje= CmpDef(function uiDataMensaje(my){ //U: como tomar parametros de la ruta
   my.render = function(props){
     console.log("InstanciaID: " + props.matches.instancia + " mensajeID: " + props.matches.msg_id);
     //A: tengo la instancia y el mensaje_id con esta info le pido al servidor que mensajes tiene
@@ -272,7 +264,7 @@ Rutas= { //U; RUTA DE PREACT ROUTE
 	"/home":{cmp: uiHome},
 }
 
-App= MkUiComponent(function App(my) {
+App= CmpDef(function App(my) {
   my.componentWillMount = function () {
     var body = document.getElementsByTagName('body')[0];
     body.style.backgroundColor =  LAYOUT.SMART_BG_COLOR;
@@ -295,6 +287,6 @@ App= MkUiComponent(function App(my) {
 
 //-----------------------------------------------------------------------------
 //S: inicio
-setTheme('chubby');
+UiSetTheme('chubby');
 render(h(App), document.body);
 //A: estemos en cordova o web, llama a la inicializacion
