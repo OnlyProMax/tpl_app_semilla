@@ -1,5 +1,12 @@
 //INFO: vars globales, inicializa, libreria, etc.
 
+GLOBAL= window; //U: para acceder a todo lo definido
+
+/************************************************************************** */
+//S: UI: pReact + Router + Semantic UI
+Routes= { //U: RUTAS DE PREACT ROUTE, las usa la pantalla principal
+}
+
 var { Component, h, render } = window.preact;
 var { Accordion, Card, Divider, Responsive, Grid, Table, Dropdown ,Label ,Select ,Header, Icon, Image, Menu, Segment, Sidebar, Modal, Button, Input, List, Item, Container, Form, Message }= window.semanticUIReact; //U: para acceder directamente ej. con h(Button ....)
 var Cmp= window.semanticUIReact; //U: para acceder con Cmp.Button, a todos de una (MEJOR)
@@ -21,7 +28,60 @@ function CmpDef(f, proto) { //U: definir un componente de UI que se puede usar c
 	return myComponentDef;
 }
 
-UiNA= () => h('div',{},'UiNA:NOT IMPLEMENTED');
+Cmp.NA= () => h('div',{},'UiNA:NOT IMPLEMENTED'); //U: para usar donde todavia no implementaste
+
+Cmp.Main= CmpDef(function CmpMain(my) { //U: el que inicia todo, usa las rutas para tus pantallas
+  my.componentWillMount = function () {
+    var body = document.getElementsByTagName('body')[0];
+    body.style.backgroundColor =  LAYOUT.BG_COLOR;
+ 		//A: cambie el color del fondo 
+ }
+ 
+	my.render= function (props, state) {
+		return (
+			h('div', {id:'app'},
+				//VER: https://github.com/preactjs/preact-router
+				h(preactRouter.Router, {history: History.createHashHistory()},
+					Object.entries(Routes).map( ([k,v]) => {
+						var cmp= typeof(v.cmp)=="function" ? v.cmp : Cmp[v.cmp]; //A: si es string, buscar en definidos
+						if (cmp==null) { console.error("Route "+k+" component not defined "+v.cmp); }
+						return h(cmp, {path: k, ...v}); //A: el comoponente para esta ruta
+					}),
+				), //A: la parte de la app que controla el router
+			)
+		);
+	}
+});
+
+function CmpDefAuto() { //U: para todas las definiciones tipo function cmp_MiPantalla te genera Cmp.MiPantalla, asi podes definir pantallas con solo definir funciones
+	var k; for (k in GLOBAL) {
+		if (typeof(GLOBAL[k])=="function") {
+			var m;
+			if (m= k.match(/^cmp_(.*)/)) { //A: es una funcion que define un componente
+				Cmp[m[1]]= CmpDef(GLOBAL[k]); //A: defino el componente
+			}
+			else if (m= k.match(/^scr_(.*)/)) { //A: es una funcion que define una pantalla, puede ser scr_factura_$fecha_$cliente y tener params!
+				Cmp[k]= CmpDef(GLOBAL[k]); //A: defino el componente, mismo nombre que funcion
+				var parts= k.replace("$",":").split("_"); parts.shift(); //A: las partes, menos scr, con : como usa el router para las variables
+				var route= parts.join("/");
+				Routes[route]= Routes[route] || {};
+				Routes[route].cmp= k;
+				//A: agregue la ruta si no estaba, actualice el componente que dibuja esa pantalla
+			}
+		}
+	}
+}
+
+function AppStart(theme) { //U: inicia la app!
+	UiSetTheme(theme || 'chubby');
+	CmpDefAuto();
+	render(h(Cmp.Main), document.body);
+}
+
+function appGoTo(route) { //U: navega a una ruta
+	if (Routes[route]==null) { console.error("Route "+route+" not defined, AppGo"); }
+	preactRouter.route(route);
+}
 
 /************************************************************************** */
 //S: colores y formatos UI
@@ -46,7 +106,7 @@ VIDEO_ICON_URL= '/ui/imagenes/video_play.png'
 /************************************************************************** */
 //S: server and files cfg
 Server_url= location.href.match(/(https?:\/\/[^\/]+)/)[0]; //A: tomar protocolo, servidor y puerto de donde esta esta pagina
-Api_url= ServerUrl+'/api'; //U: la base de la URL donde atiende el servidor
+Api_url= Server_url+'/api'; //U: la base de la URL donde atiende el servidor
 
 var Auth_usr= ''; //U: que ingreso en el form login, se pueden usar ej. para acceder a server
 var Auth_pass= '';
@@ -95,10 +155,10 @@ async function PostUrl(url, quiereJsonParseado, data) {
 
 
 /************************************************************************** */
-/****S: Util */
+//S: Util
 
 CopyToClipboardEl= null; //U: el elemento donde ponemos texto para copiar
-function copyToClipboard(texto) { //A: pone texto en el clipboard
+function copyToClipboard(texto) { //U: pone texto en el clipboard
 	if (CopyToClipboardEl==null) {
 		CopyToClipboardEl= document.createElement("textarea");   	
 		CopyToClipboardEl.style.height="0px"; 
@@ -114,7 +174,28 @@ function copyToClipboard(texto) { //A: pone texto en el clipboard
 	document.getSelection().removeAllRanges();
 }
 
+/******************************************************************************/
+//S: QR, generar imagen
+
+function QR(str) { //U: genera un objeto QR para generar distintos formatos de grafico para la str recibida como parametro
+  var typeNumber = 10; //U: cuantos datos entran VS que calidad requiere, con 10 y las tabletas baratas de VRN escaneando monitor laptop funciona ok, entran mas de 150 bytes
+  var errorCorrectionLevel = 'L'; //U: mas alto el nivel de correcion, menos fallas pero menos datos, con L funciona ok
+  var qr= qrcode(typeNumber, errorCorrectionLevel);
+  qr.addData(str);
+  qr.make();
+  return qr
+}
+
+function QRGenerarTag(str) { //U: devuelve un tag html "img" con el QR para str
+  return QR(str).createImgTag();
+}
+
+function QRGenerarData(str) { //U: devuelve la data url para usar en un tag img con el QR para str
+	return QR(str).createDataURL();
+}
+
 /************************************************************************** */
+//S
 function JSONtoDATE(JSONdate) {  //U: recibe una fecha en formato json y devuelve un string con la fecha dia/mes/anio
 	let fecha = new Date(JSONdate);
 	if (isNaN(fecha)) return 'error en fecha'
