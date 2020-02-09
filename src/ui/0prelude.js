@@ -3,6 +3,29 @@
 GLOBAL= window; //U: para acceder a todo lo definido
 
 /************************************************************************** */
+//S: utiles
+function fLog(msg,fToCallAfter) { //U: devuelve una funcion, que al llamarla loguea mensaje y los parametros
+	return function (p1,p2) { console.log(msg,p1,p1); }
+}
+
+function fAppGoTo(link) { //U: una funcion para ir a un link que se puede poner en onClick
+	return function () { appGoTo(link); }
+}
+
+function paramsToTypeKv() { //U: devuelve un kv con los params separados por tipo
+	var r= {};
+	for (var i=0;i<arguments.length;i++) { var v= arguments[i];
+		if (typeof(v)=="function") { r.f= v; }
+		else if (Array.isArray(v)) { r.array= v; }
+		else if (typeof(v)=="object") { r.kv= v; }
+		else { r.txt= v; }
+	}
+	r.kv= r.kv || {};
+	return r;
+}
+
+
+/************************************************************************** */
 //S: UI: pReact + Router + Semantic UI
 Routes= { //U: RUTAS DE PREACT ROUTE, las usa la pantalla principal
 }
@@ -16,16 +39,21 @@ render_str= preactRenderToString; //U: genera el html para un componente
 function CmpDef(f, proto) { //U: definir un componente de UI que se puede usar como los otros de pReact+Semantic ej. Button, le pasa una variable "my" como parametro a "f" ej. para hacer "my.render= ..."
 	proto= proto || Component;
 	f= f || function () {};
+
 	var myComponentDef= function (...args) {
-		var my= this; //A: I want my closueres back!
+		var my= this; 
 		proto.apply(my,args);  //A: initialize with parent
-		my.toProp= function (name) { return (e) => { my[name]= e.target.value; } }
-		//U: para usar con onChange u onInput
-		
 		f.apply(my,[my].concat(args));
-		//A: llamamos la funcion que define el componente
+		//A: llamamos la funcion que define el componente con la instancia
 	}
-	myComponentDef.prototype= new proto(); 
+
+	var p= myComponentDef.prototype= new proto(); 
+
+	p.toProp= function (name) {	//U: para usar con onChange u onInput
+		return (e) => { this[name]= e.target.value; } 
+	}
+	p.refresh= function (kv) { this.setState(kv || {}); } //U: redibujar 
+
 	return myComponentDef;
 }
 
@@ -72,6 +100,34 @@ function CmpDefAuto() { //U: para todas las definiciones tipo function cmp_MiPan
 		}
 	}
 }
+
+function eAct() { //U: un elemento accionable tipo boton
+	var d= paramsToTypeKv.apply(null,arguments);	
+	d.kv.children= d.array || (d.txt && [d.txt]);
+	d.kv.onClick= d.f;
+	return h(d.kv.cmp || Button, d.kv);
+}
+
+function eOut() { //U: elemento de salida tipo div
+	var d= paramsToTypeKv.apply(null,arguments);	
+	d.kv.children= d.array || (d.txt && [d.txt]);
+	d.kv.onClick= d.f;
+	return h(d.kv.cmp || 'div', d.kv);
+}
+
+function eGroup() { //U: array con grupo de elementos
+	var d= paramsToTypeKv.apply(null,arguments);	
+	d.kv.children= d.array || (d.txt && [d.txt]);
+	return h(d.kv.cmp || 'div', d.kv);
+}
+
+function e() { //U: elemento "si adivina" que tipo
+	var d= paramsToTypeKv.apply(null,arguments);	
+	d.kv.children= d.array || (d.txt && [d.txt]);
+	console.log("PEPE",d);
+	return h(d.kv.cmp || d.f, d.kv.cmp ? d.kv: {children: d.kv.children});
+}
+
 
 function AppStart(theme) { //U: inicia la app!
 	UiSetTheme(theme || 'chubby');

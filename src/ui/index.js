@@ -2,21 +2,28 @@
 
 //------------------------------------------------------------
 //S: mover a lib
-function fLog(msg,fToCallAfter) { //U: devuelve una funcion, que al llamarla loguea mensaje y los parametros
-	return function (p1,p2) { console.log(msg,p1,p1); }
-}
-
-function fAppGoTo(link) { //U: una funcion para ir a un link que se puede poner en onClick
-	return function () { appGoTo(link); }
-}
-
 //------------------------------------------------------------
+function cmp_cnt(my) {
+	var cnt= 0;
+	function inc() { cnt++; my.refresh(); }
+	function dec() { cnt--; my.refresh(); }
+
+	my.render= function() {
+		return eGroup([ 
+			eOut(cnt),
+			eAct('+',inc),
+			eAct('menos',dec,{cmp: 'a', style: { border: '2px dotted gray'}})
+		]);
+	}
+}
+
 function scr_home(my){ //U: pantalla principal cuando ya te logueaste
 	my.render= function () { 
-		return h('div',{},
+		return eGroup([
 			'Hola PodemosAprender!',
-			h(Button,{onClick: () => appGoTo('/radio')},'radio!'),
-		);
+			eAct('radio!', fAppGoTo('/radio')),
+			e(Cmp.cnt), e(Cmp.cnt),
+		]);
 	}
 }
 
@@ -24,9 +31,9 @@ function cmp_audio(my) { //U: un componente para reproducir audio
 	my.render= function cmp_audio_render(props) {
 		//eventos interesates onEnded: fLog("ended"), onLoadedmetadata: fLog("load")
 		//SEE: https://www.w3schools.com/tags/ref_av_dom.asp
-		return h('audio',{controls: true, ... props},
-				h('source',{src: props.src , type: "audio/ogg"})
-		);
+		return e({cmp: 'audio',controls: true, ... props}, [
+				e({cmp:'source',src: props.src , type: "audio/ogg"})
+		]);
 	}
 }
 
@@ -39,7 +46,8 @@ function radioFecth(wantsReload) {
 		.then(r => r.text())
 		.then(t => { 
 			RadioIdx= {}; 
-			t.match(/<p>[^<]*/g) //A: array con todo desde <p>hasta<
+			console.log("El texto que traje es "+t);
+			t.match(/<p>[^<]*/g) //A: array con todas las entradas desde <p>hasta<
 			.forEach( f => {
 				var parts= f.split("/"); parts.shift(); //A: tiro <p>.
 				if (parts[1].match(/.ogg/)) { return } //A: no quiero los audios de entrada y salida
@@ -54,6 +62,9 @@ function radioFecth(wantsReload) {
 function scr_radio_$programa(my) { //U: escuchar la radio, un programa, radio/miprograma
 	var wantsPlay= false;
 	var audios= null;
+	var audioIdx= 0;
+	var audioDone= false;
+	var indexLoaded= false;
 
 	function audioOnLoadedMetadata(e) {
 		wantsPlay= true;
@@ -62,25 +73,24 @@ function scr_radio_$programa(my) { //U: escuchar la radio, un programa, radio/mi
 	}
 
 	function audioOnEnded() {
-		if (my.state.audioIdx<audios.length-1) {
-			my.setState({audioIdx: my.state.audioIdx+1}); //A: actualizar
-		}
-		else {
-			my.setState({audioDone: true}); //A: actualizar
-		}
+		if (audioIdx<audios.length-1) { audioIdx++; }
+		else { audioDone= true; }
+		my.refresh(); //A: redibujar
 	}
 
 	function volverAEscuchar() {
 		wantsPlay= true;
-		my.setState({audioIdx: 0, audioDone: false});
+		audioIdx= 0; audioDone= false;
+		my.refresh();
 	}
 
 	my.componentWillMount= function () {
-		radioFecth().then(() => my.setState({indexLoaded: true})); //A: cargue lista de programas
+		radioFecth()
+			.then(() => {indexLoaded= true; my.refresh() }); //A: cargue lista de programas
 	}
 
 	my.render= function (props, state) { 
-		state.audioIdx= state.audioIdx || 0; 
+		audioIdx= audioIdx || 0; 
 		programa= props.matches.programa;
 		audios= RadioIdx && RadioIdx[programa] && RadioIdx[programa].audios
 		console.log("Radio programa="+programa+" audios="+audios);
@@ -88,34 +98,40 @@ function scr_radio_$programa(my) { //U: escuchar la radio, un programa, radio/mi
 		return h('div',{},
 			h('h1',{},'Radio PodemosAprender'),
 			h('h2',{},programa),
-			state.indexLoaded 
-				? state.audioDone 
-					? h(Button,{onClick: volverAEscuchar},'Volver a escuchar') 
-					: h('div',{},
-							h('h4',{},"(" + state.audioIdx + "/" + audios.length+") "+audios[state.audioIdx]),
-							h(Cmp.audio,{src: audios[state.audioIdx], onEnded: audioOnEnded, onLoadedmetadata: audioOnLoadedMetadata, autoplay: wantsPlay}),
+			indexLoaded 
+				? audioDone 
+					? eAct(volverAEscuchar,'Volver a escuchar') 
+					: eGroup([
+							h('h4',{},"(" + audioIdx + "/" + audios.length+") "+audios[audioIdx]),
+							h(Cmp.audio,{src: audios[audioIdx], onEnded: audioOnEnded, onLoadedmetadata: audioOnLoadedMetadata, autoplay: wantsPlay}),
 							h('div',{},
 								h(Button,{onClick: audioOnEnded},'Próximo') 
 							)
-						)
+						])
 				: 'Cargando programa '+programa,
-			h(Button,{onClick: fAppGoTo('/radio')},'Volver a la lista')
+			eAct(fAppGoTo('/radio'),'Volver a la lista')
 		);
 	}
 }
 
 function scr_radio(my) { //U: escuchar la radio, ver programas
+	var indexLoaded= false;
+
 	my.componentWillMount= function () {
-		radioFecth().then(() => my.setState({indexLoaded: true})); //A: cargue lista de programas
+		radioFecth()
+			.then(() => {indexLoaded= true; my.refresh()}); //A: cargue lista de programas
 	}
 
 	my.render= function (props, state) { 
-		return h('div',{},
+		var eProgramas= 'Cargando programas ...'; //DFLT: lista de programas
+		if (indexLoaded) {
+			eProgramas= Object.keys(RadioIdx).map( k => eAct(k,fAppGoTo('/radio/'+k),{style: {display: 'block', margin: '5px'}}) )
+		}
+
+		return eGroup([
 			h('h1',{},'Radio PodemosAprender'),
-			state.indexLoaded 
-				? Object.keys(RadioIdx).map( k => h('p',{},h('a',{onClick: fAppGoTo('/radio/'+k)},k)) )
-				: 'Cargando programas ...'
-		);
+			eProgramas
+		]);
 	}
 
 }
