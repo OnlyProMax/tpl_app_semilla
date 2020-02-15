@@ -37,17 +37,18 @@ function cmp_audio(my) { //U: un componente para reproducir audio
 	}
 }
 
-RADIO_URL="https://www.podemosaprender.org/data_radio/"
+RADIO_URL="https://www.podemosaprender.org/data_radio/";
 RadioIdx= null; //DFLT
 function radioFecth(wantsReload) {
 	if (RadioIdx && !wantsReload) { return new Promise(cb => cb(RadioIdx)) }
 	//A: si ya lo tenia, lo devolvi, sino lo busco
-	return fetch(RADIO_URL)
+	return fetch(RADIO_URL+'programas.html?x='+Date.now())
 		.then(r => r.text())
 		.then(t => { 
 			RadioIdx= {}; 
 			console.log("El texto que traje es "+t);
 			t.match(/<p>[^<]*/g) //A: array con todas las entradas desde <p>hasta<
+			.sort()
 			.forEach( f => {
 				var parts= f.split("/"); parts.shift(); //A: tiro <p>.
 				if (parts[1].match(/.ogg/)) { return } //A: no quiero los audios de entrada y salida
@@ -125,7 +126,7 @@ function scr_radio(my) { //U: escuchar la radio, ver programas
 	my.render= function (props, state) { 
 		var eProgramas= 'Cargando programas ...'; //DFLT: lista de programas
 		if (indexLoaded) {
-			eProgramas= Object.keys(RadioIdx).map( k => eAct(k,fAppGoTo('/radio/'+k),{style: {display: 'block', margin: '5px'}}) )
+			eProgramas= Object.keys(RadioIdx).sort().map( k => eAct(k,fAppGoTo('/radio/'+k),{style: {display: 'block', margin: '5px'}}) )
 		}
 
 		return eGroup([
@@ -202,5 +203,5 @@ function ImageCreateLink(instancia, file){ //U: crea una url para pedir un archi
 
 //-----------------------------------------------------------------------------
 //S: inicio
-Routes["/"]= {cmp: "scr_login"}
+Routes["/"]= {cmp: "scr_radio"}
 AppStart();
